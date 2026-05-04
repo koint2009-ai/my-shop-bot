@@ -1,0 +1,58 @@
+body {
+  background: #0b0f1a;
+  color: white;
+  font-family: Arial;
+  padding: 15px;
+}
+
+h1 {
+  margin-bottom: 20px;
+}
+
+.card {
+  background: #111827;
+  border-radius: 20px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.price {
+  font-size: 18px;
+}
+
+.old {
+  text-decoration: line-through;
+  color: gray;
+  margin-left: 10px;
+}
+
+.controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.qty {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.qty button {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+
+.add {
+  background: linear-gradient(45deg, #6d28d9, #06b6d4);
+}
+
+button {
+  border: none;
+  padding: 8px;
+  color: white;
+  cursor: pointer;
+  border-radius: 10px;
+}
