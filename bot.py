@@ -1,13 +1,13 @@
 import asyncio
 import sqlite3
+import os
 
 from aiogram import Bot, Dispatcher
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 
-import os
-
+# 🔐 БЕРЁМ ИЗ RAILWAY VARIABLES
 TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = 1117190340
+ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
@@ -43,6 +43,12 @@ def init_db():
 
     conn.commit()
     conn.close()
+
+
+# 🔥 ПОЛУЧЕНИЕ URL ФОТО
+async def get_file_url(file_id):
+    file = await bot.get_file(file_id)
+    return f"https://api.telegram.org/file/bot{TOKEN}/{file.file_path}"
 
 
 # 🧠 СОСТОЯНИЕ
@@ -100,7 +106,7 @@ async def admin(message: Message):
     )
 
 
-# ➕ СТАРТ
+# ➕ СТАРТ ДОБАВЛЕНИЯ
 @dp.message(lambda m: m.text == "/add" and m.from_user.id == ADMIN_ID)
 async def add_product(message: Message):
     temp_product[message.from_user.id] = {"step": "text"}
@@ -110,36 +116,35 @@ async def add_product(message: Message):
 # 📸 ФОТО
 @dp.message(lambda m: m.photo and m.from_user.id == ADMIN_ID)
 async def handle_photo(message: Message):
-    try:
-        user_id = message.from_user.id
+    user_id = message.from_user.id
 
-        if user_id not in temp_product:
-            return
+    if user_id not in temp_product:
+        return
 
-        state = temp_product[user_id]
+    state = temp_product[user_id]
 
-        if state.get("step") != "photo":
-            return
+    if state.get("step") != "photo":
+        return
 
-        file_id = message.photo[-1].file_id
+    file_id = message.photo[-1].file_id
 
-        conn, cursor = get_db()
+    # 🔥 ПОЛУЧАЕМ URL
+    file_url = await get_file_url(file_id)
 
-        cursor.execute(
-            "INSERT INTO products (name, price, photo) VALUES (?, ?, ?)",
-            (state["name"], state["price"], file_id)
-        )
+    conn, cursor = get_db()
 
-        conn.commit()
-        conn.close()
+    cursor.execute(
+        "INSERT INTO products (name, price, photo) VALUES (?, ?, ?)",
+        (state["name"], state["price"], file_url)
+    )
 
-        temp_product.pop(user_id, None)
+    conn.commit()
+    conn.close()
 
-        await message.answer("✅ Товар добавлен!")
+    temp_product.pop(user_id, None)
 
-    except Exception as e:
-        print("ERROR:", e)
-        await message.answer("❌ Ошибка при сохранении")
+    await message.answer("✅ Товар добавлен!")
+
 
 # 🧾 ТЕКСТ
 @dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "," in m.text)
