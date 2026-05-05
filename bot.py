@@ -5,7 +5,7 @@ import os
 from aiogram import Bot, Dispatcher
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 
-# 🔐 БЕРЁМ ИЗ RAILWAY VARIABLES
+# 🔐 ПЕРЕМЕННЫЕ (Railway → Variables)
 TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
@@ -19,7 +19,6 @@ def get_db():
     return conn, conn.cursor()
 
 
-# 🔧 СОЗДАНИЕ ТАБЛИЦ
 def init_db():
     conn, cursor = get_db()
 
@@ -45,7 +44,7 @@ def init_db():
     conn.close()
 
 
-# 🔥 ПОЛУЧЕНИЕ URL ФОТО
+# 🔗 ПОЛУЧЕНИЕ URL ФОТО
 async def get_file_url(file_id):
     file = await bot.get_file(file_id)
     return f"https://api.telegram.org/file/bot{TOKEN}/{file.file_path}"
@@ -106,69 +105,72 @@ async def admin(message: Message):
     )
 
 
-# ➕ СТАРТ ДОБАВЛЕНИЯ
+# ➕ НАЧАТЬ ДОБАВЛЕНИЕ
 @dp.message(lambda m: m.text == "/add" and m.from_user.id == ADMIN_ID)
 async def add_product(message: Message):
     temp_product[message.from_user.id] = {"step": "text"}
     await message.answer("Введи: Название,Цена\nПример:\nHoodie,50")
 
 
-# 📸 ФОТО
-@dp.message(lambda m: m.photo and m.from_user.id == ADMIN_ID)
-async def handle_photo(message: Message):
+# 🔥 УНИВЕРСАЛЬНЫЙ ОБРАБОТЧИК (ФИКС ВСЕХ ПРОБЛЕМ)
+@dp.message()
+async def handle_all(message: Message):
     user_id = message.from_user.id
+
+    if user_id != ADMIN_ID:
+        return
 
     if user_id not in temp_product:
         return
 
     state = temp_product[user_id]
 
-    if state.get("step") != "photo":
+    # 📄 ШАГ 1 — текст
+    if state["step"] == "text":
+        if not message.text or "," not in message.text:
+            await message.answer("❌ Введи: Название,Цена")
+            return
+
+        try:
+            name, price = message.text.split(",")
+
+            temp_product[user_id] = {
+                "step": "photo",
+                "name": name.strip(),
+                "price": int(price.strip())
+            }
+
+            await message.answer("📸 Теперь отправь фото")
+        except:
+            await message.answer("❌ Ошибка формата")
+
         return
 
-    file_id = message.photo[-1].file_id
+    # 📸 ШАГ 2 — фото
+    if state["step"] == "photo":
+        if not message.photo:
+            await message.answer("❌ Отправь именно фото")
+            return
 
-    # 🔥 ПОЛУЧАЕМ URL
-    file_url = await get_file_url(file_id)
+        file_id = message.photo[-1].file_id
+        file_url = await get_file_url(file_id)
 
-    conn, cursor = get_db()
+        conn, cursor = get_db()
 
-    cursor.execute(
-        "INSERT INTO products (name, price, photo) VALUES (?, ?, ?)",
-        (state["name"], state["price"], file_url)
-    )
+        cursor.execute(
+            "INSERT INTO products (name, price, photo) VALUES (?, ?, ?)",
+            (state["name"], state["price"], file_url)
+        )
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+        conn.close()
 
-    temp_product.pop(user_id, None)
+        temp_product.pop(user_id, None)
 
-    await message.answer("✅ Товар добавлен!")
-
-
-# 🧾 ТЕКСТ
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "," in m.text and not m.text.startswith("/"))
-async def handle_text(message: Message):
-    user_id = message.from_user.id
-
-    if user_id not in temp_product:
-        return
-
-    try:
-        name, price = message.text.split(",")
-
-        temp_product[user_id] = {
-            "step": "photo",
-            "name": name.strip(),
-            "price": int(price.strip())
-        }
-
-        await message.answer("📸 Теперь отправь фото товара")
-    except:
-        await message.answer("❌ Ошибка формата")
+        await message.answer("✅ Товар добавлен!")
 
 
-# 📋 СПИСОК
+# 📋 СПИСОК ТОВАРОВ
 @dp.message(lambda m: m.text == "/products" and m.from_user.id == ADMIN_ID)
 async def list_products(message: Message):
     conn, cursor = get_db()
