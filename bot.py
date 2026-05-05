@@ -108,9 +108,12 @@ async def handle_add(message: Message):
 
     state = temp_product[user_id]
 
-    # 📝 ШАГ 1 — текст
+    # 🔥 ШАГ 1 — текст
     if state["step"] == "text":
-        if not message.text or "," not in message.text:
+        if not message.text:
+            return
+
+        if "," not in message.text:
             await message.answer("❌ Формат: Название,Цена")
             return
 
@@ -128,24 +131,25 @@ async def handle_add(message: Message):
             await message.answer("❌ Ошибка формата")
         return
 
-    # 📸 ШАГ 2 — фото
+    # 🔥 ШАГ 2 — фото
     if state["step"] == "photo":
-        if not message.photo:
-            await message.answer("❌ Отправь именно фото")
+        if message.photo:
+            file_id = message.photo[-1].file_id
+
+            cursor.execute(
+                "INSERT INTO products (name, price, photo) VALUES (?, ?, ?)",
+                (state["name"], state["price"], file_id)
+            )
+            conn.commit()
+
+            del temp_product[user_id]
+
+            await message.answer("✅ Товар добавлен!")
             return
 
-        file_id = message.photo[-1].file_id
-
-        cursor.execute(
-            "INSERT INTO products (name, price, photo) VALUES (?, ?, ?)",
-            (state["name"], state["price"], file_id)
-        )
-        conn.commit()
-
-        del temp_product[user_id]
-
-        await message.answer("✅ Товар добавлен!")
-        return
+        else:
+            await message.answer("❌ Отправь именно фото")
+            return
 
 
 # 📋 СПИСОК ТОВАРОВ
