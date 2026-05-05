@@ -1,7 +1,7 @@
 import asyncio
 import sqlite3
 
-from aiogram import Bot, Dispatcher, F
+from aiogram import Bot, Dispatcher
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 
 # 🔑 ВСТАВЬ СВОЙ ТОКЕН
@@ -37,11 +37,11 @@ CREATE TABLE IF NOT EXISTS orders (
 
 conn.commit()
 
-# 🧠 состояние
+# 🧠 СОСТОЯНИЕ
 temp_product = {}
 
 # 🚀 START
-@dp.message(F.text == "/start")
+@dp.message(lambda m: m.text == "/start")
 async def start(message: Message):
     kb = ReplyKeyboardMarkup(
         keyboard=[
@@ -58,8 +58,8 @@ async def start(message: Message):
     await message.answer("👋 Добро пожаловать!", reply_markup=kb)
 
 
-# 🛒 ЗАКАЗ С САЙТА
-@dp.message(F.web_app_data)
+# 🛒 ЗАКАЗ
+@dp.message(lambda m: m.web_app_data)
 async def get_order(message: Message):
     order = message.web_app_data.data
 
@@ -78,11 +78,8 @@ async def get_order(message: Message):
 
 
 # 👨‍💼 АДМИНКА
-@dp.message(F.text == "/admin")
+@dp.message(lambda m: m.text == "/admin" and m.from_user.id == ADMIN_ID)
 async def admin(message: Message):
-    if message.from_user.id != ADMIN_ID:
-        return
-
     await message.answer(
         "👨‍💼 Админка\n\n"
         "/add - добавить товар\n"
@@ -91,19 +88,16 @@ async def admin(message: Message):
     )
 
 
-# ➕ СТАРТ ДОБАВЛЕНИЯ
-@dp.message(F.text == "/add")
+# ➕ ШАГ 1
+@dp.message(lambda m: m.text == "/add" and m.from_user.id == ADMIN_ID)
 async def add_product(message: Message):
-    if message.from_user.id != ADMIN_ID:
-        return
-
     temp_product[message.from_user.id] = {"step": "text"}
     await message.answer("Введи: Название,Цена\nПример:\nHoodie,50")
 
 
-# 📝 ТЕКСТ (название + цена)
-@dp.message(F.text)
-async def handle_text(message: Message):
+# 🔥 ОБРАБОТКА ДОБАВЛЕНИЯ
+@dp.message()
+async def handle_add(message: Message):
     user_id = message.from_user.id
 
     if user_id != ADMIN_ID:
@@ -114,62 +108,55 @@ async def handle_text(message: Message):
 
     state = temp_product[user_id]
 
-    if state["step"] != "text":
+    # 🧠 ШАГ 1 — текст
+    if state.get("step") == "text":
+        if not message.text:
+            return
+
+        if "," not in message.text:
+            await message.answer("❌ Формат: Название,Цена")
+            return
+
+        try:
+            name, price = message.text.split(",")
+
+            temp_product[user_id]["step"] = "photo"
+            temp_product[user_id]["name"] = name.strip()
+            temp_product[user_id]["price"] = int(price.strip())
+
+            await message.answer("📸 Теперь отправь фото товара")
+        except:
+            await message.answer("❌ Ошибка формата")
         return
 
-    if "," not in message.text:
-        await message.answer("❌ Формат: Название,Цена")
-        return
+    # 📸 ШАГ 2 — фото
+    if state.get("step") == "photo":
+        if not message.photo:
+            await message.answer("❌ Отправь именно фото")
+            return
 
-    try:
-        name, price = message.text.split(",")
+        # 🔒 защита
+        if "name" not in state or "price" not in state:
+            await message.answer("❌ Ошибка состояния. Напиши /add заново")
+            temp_product.pop(user_id, None)
+            return
 
-        temp_product[user_id] = {
-            "step": "photo",
-            "name": name.strip(),
-            "price": int(price.strip())
-        }
+        file_id = message.photo[-1].file_id
 
-        await message.answer("Теперь отправь фото 📸")
-    except:
-        await message.answer("❌ Ошибка формата")
+        cursor.execute(
+            "INSERT INTO products (name, price, photo) VALUES (?, ?, ?)",
+            (state["name"], state["price"], file_id)
+        )
+        conn.commit()
 
+        temp_product.pop(user_id, None)
 
-# 📸 ФОТО (срабатывает ВСЕГДА)
-@dp.message(F.photo)
-async def handle_photo(message: Message):
-    user_id = message.from_user.id
-
-    if user_id != ADMIN_ID:
-        return
-
-    if user_id not in temp_product:
-        return
-
-    state = temp_product[user_id]
-
-    if state["step"] != "photo":
-        return
-
-    file_id = message.photo[-1].file_id
-
-    cursor.execute(
-        "INSERT INTO products (name, price, photo) VALUES (?, ?, ?)",
-        (state["name"], state["price"], file_id)
-    )
-    conn.commit()
-
-    del temp_product[user_id]
-
-    await message.answer("✅ Товар добавлен!")
+        await message.answer("✅ Товар добавлен!")
 
 
 # 📋 СПИСОК
-@dp.message(F.text == "/products")
+@dp.message(lambda m: m.text == "/products" and m.from_user.id == ADMIN_ID)
 async def list_products(message: Message):
-    if message.from_user.id != ADMIN_ID:
-        return
-
     cursor.execute("SELECT * FROM products")
     products = cursor.fetchall()
 
@@ -185,11 +172,8 @@ async def list_products(message: Message):
 
 
 # ❌ УДАЛЕНИЕ
-@dp.message(F.text.startswith("/delete"))
+@dp.message(lambda m: m.text.startswith("/delete") and m.from_user.id == ADMIN_ID)
 async def delete_product(message: Message):
-    if message.from_user.id != ADMIN_ID:
-        return
-
     try:
         product_id = int(message.text.split()[1])
 
@@ -203,7 +187,7 @@ async def delete_product(message: Message):
 
 # ▶️ ЗАПУСК
 async def main():
-    print("🔥 Бот запущен...")
+    print("🔥 BOT STARTED")
     await dp.start_polling(bot)
 
 
