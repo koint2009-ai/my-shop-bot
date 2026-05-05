@@ -147,7 +147,7 @@ async def handle_photo(message: Message):
 
 
 # 🧾 ТЕКСТ
-@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "," in m.text)
+@dp.message(lambda m: m.from_user.id == ADMIN_ID and m.text and "," in m.text and not m.text.startswith("/"))
 async def handle_text(message: Message):
     user_id = message.from_user.id
 
