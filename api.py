@@ -56,6 +56,11 @@ def run_bot():
     asyncio.set_event_loop(loop)
     loop.run_until_complete(dp.start_polling(bot))
 
-# 🚀 ВАЖНО: запускается сразу
+# 🚀 запуск (работает и в Railway, и локально)
 init_db()
 threading.Thread(target=run_bot, daemon=True).start()
+
+# 👇 ДОБАВЬ ЭТО
+@app.route("/")
+def home():
+    return "API WORKING"
