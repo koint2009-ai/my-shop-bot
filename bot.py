@@ -7,7 +7,12 @@ from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, WebAppIn
 
 # 🔐 Railway Variables
 TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = int(os.getenv("ADMIN_ID"))
+ADMIN_ID = os.getenv("ADMIN_ID")
+
+if not ADMIN_ID:
+    raise ValueError("❌ ADMIN_ID не найден")
+
+ADMIN_ID = int(ADMIN_ID)
 
 if not TOKEN:
     raise ValueError("❌ BOT_TOKEN не найден")
