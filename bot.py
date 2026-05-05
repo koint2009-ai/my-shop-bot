@@ -4,7 +4,9 @@ import sqlite3
 from aiogram import Bot, Dispatcher
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 
-TOKEN = "8701068910:AAGZtEQvzrRNVCQJzrwevIYIaNLLmvQC8Ko"
+import os
+
+TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = 1117190340
 
 bot = Bot(token=TOKEN)
