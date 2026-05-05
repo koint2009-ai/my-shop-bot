@@ -5,19 +5,22 @@ import os
 from aiogram import Bot, Dispatcher
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 
-# 🔐 ПЕРЕМЕННЫЕ (Railway → Variables)
+# 🔐 Railway Variables
 TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
+if not TOKEN:
+    raise ValueError("❌ BOT_TOKEN не найден")
+if not ADMIN_ID:
+    raise ValueError("❌ ADMIN_ID не найден")
+
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
-
 
 # 📦 БАЗА
 def get_db():
     conn = sqlite3.connect("shop.db", check_same_thread=False)
     return conn, conn.cursor()
-
 
 def init_db():
     conn, cursor = get_db()
@@ -43,16 +46,13 @@ def init_db():
     conn.commit()
     conn.close()
 
-
-# 🔗 ПОЛУЧЕНИЕ URL ФОТО
+# 🔗 Получение URL фото
 async def get_file_url(file_id):
     file = await bot.get_file(file_id)
     return f"https://api.telegram.org/file/bot{TOKEN}/{file.file_path}"
 
-
-# 🧠 СОСТОЯНИЕ
+# 🧠 состояние
 temp_product = {}
-
 
 # 🚀 START
 @dp.message(lambda m: m.text == "/start")
@@ -61,38 +61,12 @@ async def start(message: Message):
         keyboard=[
             [KeyboardButton(
                 text="🛍 Открыть магазин",
-                web_app=WebAppInfo(
-                    url="https://gorgeous-zabaione-63939c.netlify.app"
-                )
+                web_app=WebAppInfo(url="https://gorgeous-zabaione-63939c.netlify.app")
             )]
         ],
         resize_keyboard=True
     )
     await message.answer("👋 Добро пожаловать!", reply_markup=kb)
-
-
-# 🛒 ЗАКАЗ
-@dp.message(lambda m: m.web_app_data)
-async def get_order(message: Message):
-    conn, cursor = get_db()
-
-    order = message.web_app_data.data
-
-    cursor.execute(
-        "INSERT INTO orders (user_id, username, order_text) VALUES (?, ?, ?)",
-        (message.from_user.id, message.from_user.username, order)
-    )
-
-    conn.commit()
-    conn.close()
-
-    await message.answer("✅ Заказ отправлен!")
-
-    await bot.send_message(
-        ADMIN_ID,
-        f"🛒 Новый заказ:\n\n{order}\n👤 @{message.from_user.username}"
-    )
-
 
 # 👨‍💼 АДМИНКА
 @dp.message(lambda m: m.text == "/admin" and m.from_user.id == ADMIN_ID)
@@ -104,31 +78,68 @@ async def admin(message: Message):
         "/delete ID - удалить товар"
     )
 
-
-# ➕ НАЧАТЬ ДОБАВЛЕНИЕ
+# ➕ СТАРТ ДОБАВЛЕНИЯ
 @dp.message(lambda m: m.text == "/add" and m.from_user.id == ADMIN_ID)
 async def add_product(message: Message):
     temp_product[message.from_user.id] = {"step": "text"}
     await message.answer("Введи: Название,Цена\nПример:\nHoodie,50")
 
+# 📋 СПИСОК ТОВАРОВ
+@dp.message(lambda m: m.text == "/products" and m.from_user.id == ADMIN_ID)
+async def list_products(message: Message):
+    conn, cursor = get_db()
+    cursor.execute("SELECT * FROM products")
+    products = cursor.fetchall()
+    conn.close()
 
-# 🔥 УНИВЕРСАЛЬНЫЙ ОБРАБОТЧИК (ФИКС ВСЕХ ПРОБЛЕМ)
+    if not products:
+        await message.answer("❌ Товаров нет")
+        return
+
+    for p in products:
+        await message.answer_photo(
+            p[3],
+            caption=f"ID: {p[0]}\n{p[1]} - {p[2]}€"
+        )
+
+# ❌ УДАЛЕНИЕ
+@dp.message(lambda m: m.text.startswith("/delete") and m.from_user.id == ADMIN_ID)
+async def delete_product(message: Message):
+    try:
+        product_id = int(message.text.split()[1])
+
+        conn, cursor = get_db()
+        cursor.execute("DELETE FROM products WHERE id = ?", (product_id,))
+        conn.commit()
+        conn.close()
+
+        await message.answer("🗑 Товар удалён")
+    except:
+        await message.answer("❌ Пример: /delete 1")
+
+# 🔥 ЕДИНЫЙ ОБРАБОТЧИК (без конфликтов)
 @dp.message()
-async def handle_all(message: Message):
+async def handle_add(message: Message):
     user_id = message.from_user.id
 
+    # ❗ не трогаем команды
+    if message.text and message.text.startswith("/"):
+        return
+
+    # ❗ только админ
     if user_id != ADMIN_ID:
         return
 
+    # ❗ не в процессе добавления
     if user_id not in temp_product:
         return
 
     state = temp_product[user_id]
 
-    # 📄 ШАГ 1 — текст
+    # 🔹 шаг 1 — текст
     if state["step"] == "text":
         if not message.text or "," not in message.text:
-            await message.answer("❌ Введи: Название,Цена")
+            await message.answer("❌ Формат: Название,Цена")
             return
 
         try:
@@ -146,10 +157,10 @@ async def handle_all(message: Message):
 
         return
 
-    # 📸 ШАГ 2 — фото
+    # 🔹 шаг 2 — фото
     if state["step"] == "photo":
         if not message.photo:
-            await message.answer("❌ Отправь именно фото")
+            await message.answer("❌ Отправь фото")
             return
 
         file_id = message.photo[-1].file_id
@@ -169,51 +180,11 @@ async def handle_all(message: Message):
 
         await message.answer("✅ Товар добавлен!")
 
-
-# 📋 СПИСОК ТОВАРОВ
-@dp.message(lambda m: m.text == "/products" and m.from_user.id == ADMIN_ID)
-async def list_products(message: Message):
-    conn, cursor = get_db()
-
-    cursor.execute("SELECT * FROM products")
-    products = cursor.fetchall()
-
-    conn.close()
-
-    if not products:
-        await message.answer("❌ Товаров нет")
-        return
-
-    for p in products:
-        await message.answer_photo(
-            p[3],
-            caption=f"ID: {p[0]}\n{p[1]} - {p[2]}€"
-        )
-
-
-# ❌ УДАЛЕНИЕ
-@dp.message(lambda m: m.text.startswith("/delete") and m.from_user.id == ADMIN_ID)
-async def delete_product(message: Message):
-    try:
-        product_id = int(message.text.split()[1])
-
-        conn, cursor = get_db()
-
-        cursor.execute("DELETE FROM products WHERE id = ?", (product_id,))
-        conn.commit()
-        conn.close()
-
-        await message.answer("🗑 Товар удалён")
-    except:
-        await message.answer("❌ Пример: /delete 1")
-
-
 # ▶️ ЗАПУСК
 async def main():
     init_db()
     print("🔥 BOT STARTED")
     await dp.start_polling(bot)
-
 
 if __name__ == "__main__":
     asyncio.run(main())
