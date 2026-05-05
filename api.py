@@ -59,7 +59,7 @@ def home():
 def run_bot():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    loop.run_until_complete(dp.start_polling(bot))
+    loop.run_until_complete(dp.start_polling(bot, handle_signals=False))
 
 # запуск всего
 init_db()
