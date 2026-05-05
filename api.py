@@ -7,13 +7,11 @@ from bot import dp, bot
 
 app = Flask(__name__)
 
-# 📦 база
 def get_db():
     conn = sqlite3.connect("shop.db")
     conn.row_factory = sqlite3.Row
     return conn
 
-# 🧱 создаём таблицу
 def init_db():
     conn = get_db()
     cursor = conn.cursor()
@@ -30,7 +28,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-# 🌐 API
 @app.route("/products")
 def products():
     conn = get_db()
@@ -50,23 +47,15 @@ def products():
 
     return jsonify(result)
 
-# проверка
 @app.route("/")
 def home():
     return "API WORKING"
 
-# 🤖 запуск бота (исправленный)
 def run_bot():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.run_until_complete(dp.start_polling(bot, handle_signals=False))
 
-# 🚀 ЗАПУСК ВСЕГО
-if __name__ == "__main__":
-    init_db()
-
-    # запускаем бота в фоне
-    threading.Thread(target=run_bot, daemon=True).start()
-
-    # запускаем Flask (ЭТО ВАЖНО)
-    app.run(host="0.0.0.0", port=5000)
+# 🔥 ВАЖНО — запускается ВСЕГДА
+init_db()
+threading.Thread(target=run_bot, daemon=True).start()
