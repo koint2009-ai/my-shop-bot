@@ -10,16 +10,19 @@ from aiogram.types import (
     WebAppInfo
 )
 
+# 🔑 Railway Variables
 TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
+# 🤖 BOT
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# 📦 БАЗА
+# 📦 DATABASE
 conn = sqlite3.connect("shop.db", check_same_thread=False)
 cursor = conn.cursor()
 
+# 🧱 TABLES
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS products (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,7 +43,7 @@ CREATE TABLE IF NOT EXISTS orders (
 
 conn.commit()
 
-# 🧠 СОСТОЯНИЯ
+# 🧠 STATES
 states = {}
 
 # 🚀 START
@@ -66,9 +69,12 @@ async def start(message: Message):
         reply_markup=kb
     )
 
-# 🛒 WEB APP ORDER
-@dp.message(lambda m: m.web_app_data)
+# 🛒 ORDER
+@dp.message()
 async def get_order(message: Message):
+
+    if not message.web_app_data:
+        return
 
     order = message.web_app_data.data
 
@@ -108,7 +114,7 @@ async def admin(message: Message):
         "/delete ID - удалить товар"
     )
 
-# ➕ ADD
+# ➕ ADD PRODUCT
 @dp.message(lambda m: m.text == "/add" and m.from_user.id == ADMIN_ID)
 async def add_product(message: Message):
 
@@ -120,7 +126,7 @@ async def add_product(message: Message):
         "Введи:\n\nНазвание,Цена\n\nПример:\nHoodie,50"
     )
 
-# 🧾 TEXT
+# 🧾 TEXT STEP
 @dp.message(lambda m: m.text and "," in m.text and m.from_user.id == ADMIN_ID)
 async def handle_text(message: Message):
 
@@ -144,7 +150,7 @@ async def handle_text(message: Message):
     except:
         await message.answer("❌ Ошибка формата")
 
-# 📸 PHOTO
+# 📸 PHOTO STEP
 @dp.message(lambda m: m.photo and m.from_user.id == ADMIN_ID)
 async def handle_photo(message: Message):
 
@@ -225,12 +231,13 @@ async def delete_product(message: Message):
     except:
         await message.answer("❌ Используй:\n/delete 1")
 
-# ▶️ START
+# ▶️ START BOT
 async def main():
 
     print("🔥 BOT STARTED")
 
     await dp.start_polling(bot)
 
+# 🚀 RUN
 if __name__ == "__main__":
     asyncio.run(main())
