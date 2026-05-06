@@ -193,20 +193,34 @@ async def handle_photo(message: Message):
 @dp.message(lambda m: m.text == "/products" and m.from_user.id == ADMIN_ID)
 async def list_products(message: Message):
 
-    cursor.execute("SELECT * FROM products")
+    try:
 
-    products = cursor.fetchall()
+        cursor.execute("SELECT * FROM products")
 
-    if not products:
-        await message.answer("❌ Товаров нет")
-        return
+        products = cursor.fetchall()
 
-    for p in products:
+        if not products:
+            await message.answer("❌ Товаров нет")
+            return
 
-        await message.answer_photo(
-            photo=p[3],
-            caption=f"ID: {p[0]}\n{p[1]} - {p[2]}€"
-        )
+        for p in products:
+
+            try:
+
+                await message.answer_photo(
+                    photo=p[3],
+                    caption=f"ID: {p[0]}\n{p[1]} - {p[2]}€"
+                )
+
+            except Exception:
+
+                await message.answer(
+                    f"ID: {p[0]}\n{p[1]} - {p[2]}€\n\n❌ Фото не загрузилось"
+                )
+
+    except Exception as e:
+
+        await message.answer(f"❌ Ошибка:\n{e}")
 
 # ❌ DELETE
 @dp.message(lambda m: m.text.startswith("/delete") and m.from_user.id == ADMIN_ID)
