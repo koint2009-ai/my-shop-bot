@@ -7,7 +7,7 @@ from bot import dp, bot
 
 app = Flask(__name__)
 
-# 📦 БАЗА
+# 📦 DATABASE
 def get_db():
 
     conn = sqlite3.connect("shop.db")
@@ -46,7 +46,7 @@ def products():
 def home():
     return "API WORKING"
 
-# 🤖 BOT
+# 🤖 RUN BOT
 def run_bot():
 
     loop = asyncio.new_event_loop()
