@@ -4,6 +4,7 @@ import threading
 import asyncio
 
 from bot import dp, bot
+import os
 
 app = Flask(__name__)
 
@@ -60,10 +61,12 @@ def run_bot():
 # 🚀 START
 if __name__ == "__main__":
 
-    threading.Thread(
-        target=run_bot,
-        daemon=True
-    ).start()
+    if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+
+        threading.Thread(
+            target=run_bot,
+            daemon=True
+        ).start()
 
     app.run(
         host="0.0.0.0",
