@@ -61,12 +61,10 @@ def run_bot():
 # 🚀 START
 if __name__ == "__main__":
 
-    if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
-
-        threading.Thread(
-            target=run_bot,
-            daemon=True
-        ).start()
+    threading.Thread(
+        target=run_bot,
+        daemon=True
+    ).start()
 
     app.run(
         host="0.0.0.0",
