@@ -165,11 +165,7 @@ async def handle_photo(message: Message):
 
         file_id = message.photo[-1].file_id
 
-        file = await bot.get_file(file_id)
-
-        photo_url = (
-            f"https://api.telegram.org/file/bot{TOKEN}/{file.file_path}"
-        )
+        photo_url = file_id
 
         cursor.execute(
             "INSERT INTO products (name, price, photo) VALUES (?, ?, ?)",
@@ -187,8 +183,8 @@ async def handle_photo(message: Message):
         await message.answer("✅ Товар добавлен!")
 
     except Exception as e:
-        await message.answer(f"❌ Ошибка:\n{e}")
 
+        await message.answer(f"❌ Ошибка:\n{e}")
 # 📋 PRODUCTS
 @dp.message(lambda m: m.text == "/products" and m.from_user.id == ADMIN_ID)
 async def list_products(message: Message):
