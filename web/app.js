@@ -5,10 +5,12 @@ let cart = [];
 async function loadProducts(){
 
     const res = await fetch(
-    "https://web-production-3512d.up.railway.app/products"
-);
+        "https://web-production-3512d.up.railway.app/products"
+    );
 
     const products = await res.json();
+
+    console.log(products);
 
     const container = document.getElementById("products");
 
@@ -21,7 +23,10 @@ async function loadProducts(){
         div.className = "product";
 
         div.innerHTML = `
-            <img src="${product.photo}">
+            <img 
+                src="${product.photo}" 
+                onerror="this.style.display='none'"
+            >
 
             <div class="info">
 
