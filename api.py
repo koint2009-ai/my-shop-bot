@@ -56,7 +56,7 @@ def run_bot():
     loop.run_until_complete(
         dp.start_polling(bot, handle_signals=False)
     )
-    
+
 # 🚀 START
 if __name__ == "__main__":
 
@@ -67,7 +67,5 @@ if __name__ == "__main__":
 
     app.run(
         host="0.0.0.0",
-        port=5000,
-        debug=False,
-        use_reloader=False
+        port=5000
     )
