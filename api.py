@@ -59,9 +59,16 @@ def run_bot():
 
     asyncio.set_event_loop(loop)
 
-    loop.run_until_complete(
-        dp.start_polling(bot, handle_signals=False)
-    )
+    async def start():
+
+        try:
+            await bot.delete_webhook(drop_pending_updates=True)
+        except:
+            pass
+
+        await dp.start_polling(bot, handle_signals=False)
+
+    loop.run_until_complete(start())
 
 # 🚀 START
 if __name__ == "__main__":
