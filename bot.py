@@ -70,11 +70,8 @@ async def start(message: Message):
     )
 
 # 🛒 ORDER
-@dp.message()
+@dp.message(lambda m: m.web_app_data)
 async def get_order(message: Message):
-
-    if not message.web_app_data:
-        return
 
     order = message.web_app_data.data
 
