@@ -165,7 +165,9 @@ async def handle_photo(message: Message):
 
         file_id = message.photo[-1].file_id
 
-        photo_url = file_id
+        file = await bot.get_file(file_id)
+
+        photo_url = f"https://api.telegram.org/file/bot{TOKEN}/{file.file_path}"
 
         cursor.execute(
             "INSERT INTO products (name, price, photo) VALUES (?, ?, ?)",
