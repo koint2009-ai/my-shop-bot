@@ -5,8 +5,8 @@ let cart = [];
 async function loadProducts(){
 
     const res = await fetch(
-        "https://web-production-80b79.up.railway.app/products"
-    );
+    "https://web-production-3512d.up.railway.app/products"
+);
 
     const products = await res.json();
 
