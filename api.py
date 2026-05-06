@@ -1,12 +1,16 @@
 from flask import Flask, jsonify
+from flask_cors import CORS
 import sqlite3
 import threading
 import asyncio
-
-from bot import dp, bot
 import os
 
+from bot import dp, bot
+
 app = Flask(__name__)
+
+# ✅ ENABLE CORS
+CORS(app)
 
 # 📦 DATABASE
 def get_db():
@@ -45,6 +49,7 @@ def products():
 # 🏠 HOME
 @app.route("/")
 def home():
+
     return "API WORKING"
 
 # 🤖 RUN BOT
