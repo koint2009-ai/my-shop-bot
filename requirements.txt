@@ -1,5 +1,4 @@
 aiogram==3.4.1
 flask==3.0.2
-gunicorn==21.2.0
 aiohttp==3.9.3
-pydantic==2.5.3
+gunicorn==21.2.0
